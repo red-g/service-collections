@@ -43,20 +43,24 @@ Rather, a service collection provides machinery to make your custom types easy t
 Say you have a type `Ids`, which represents a set of unique `Id`s.
 You might represent it with a service-set like this:
 ```elm
-type Ids = Ids (Service.Set Id)
+import Service.Set as Set exposing (Set)
+
+type Ids = Ids (Set Id)
 ```
 
 Maybe you want to check if an `Id` is present:
 ```elm
-member : Id -> Ids -> Bool
-member id (Ids ids) =
-  Service.Set.member sorter id ids
+member : Id -> Filter Ids
+member id =
+  Filter.by toSet <| Set.member sorter id
 ```
 
 Hold on now! What is `sorter`?
 Well, if you are creating a set of unique `Id`s, that means they are comparable in some way.
 When you define a sorter, you are explicitly outlining how your `Id`s should be compared.
 ```elm
+import Sort exposing (Sorter)
+
 sorter : Sorter Id
 sorter =
   Sort.by Id.code Sort.int
