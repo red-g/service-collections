@@ -29,6 +29,7 @@ This leads to some nasty issues.
   * While both `Dict`s share the same type and same values (they are empty), they are *not* the same
   * These `Dict`s will behave _very_ differently as we start adding entries, as they have completely separate notions of equality
   * In using this replacement equality, we lose even more of Elm's guarantees 
+
 # other solutions
 The library [miniBill/elm-generic-dict](https://package.elm-lang.org/packages/miniBill/elm-generic-dict/latest/) uses `elm-codegen` to generate custom dictionary types.
 This approach seems more inline with the general Elm approach of keeping things simple and decoupled.
