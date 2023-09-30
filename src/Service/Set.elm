@@ -12,6 +12,10 @@ module Service.Set exposing (Set, max, foldl, foldr, fromList, isEmpty, previous
     type MyRecordSet
         = MyRecordSet (Set MyRecord)
 
+    toSet : MyRecordSet -> Set MyRecord
+    toSet (MyRecordSet set) =
+        set
+
     type alias MyRecord =
         { foo : Int, bar : String }
 
@@ -24,9 +28,9 @@ module Service.Set exposing (Set, max, foldl, foldr, fromList, isEmpty, previous
     fromList =
         Set.fromList sorter
 
-    member : MyRecord -> MyRecordSet -> Bool
-    member record (MyRecordSet set) =
-        Set.member sorter record set
+    member : MyRecord -> Filter MyRecordSet
+    member record =
+        Filter.by toSet <| Set.member sorter record
 
     -- ... all the other implementations
 
@@ -69,21 +73,21 @@ empty =
 
 {-| Check if a value is in the set.
 -}
-member : Sorter k -> k -> Set k -> Bool
-member sorter key set =
-    memberHelper (Sort.order sorter key) set
+member : Sorter k -> k -> Filter (Set k)
+member sorter key =
+    Filter.custom <| memberHelper (Sort.order sorter key)
 
 
-memberHelper : (k -> Order) -> Set k -> Bool
+memberHelper : (k -> Order) -> Set k -> Filter.Status
 memberHelper sorter set =
     case set of
         Leaf ->
-            False
+            Filter.Fail
 
         Node _ key lt gt ->
             case sorter key of
                 EQ ->
-                    True
+                    Filter.Pass
 
                 LT ->
                     memberHelper sorter lt
@@ -94,14 +98,16 @@ memberHelper sorter set =
 
 {-| Check if the set is empty.
 -}
-isEmpty : Set k -> Bool
-isEmpty set =
-    case set of
-        Leaf ->
-            True
+isEmpty : Filter (Set k)
+isEmpty =
+    Filter.custom <|
+        \set ->
+            case set of
+                Leaf ->
+                    Filter.Pass
 
-        _ ->
-            False
+                _ ->
+                    Filter.Fail
 
 
 {-| Insert an element in the set.

@@ -94,21 +94,21 @@ getHelper sorter dict =
 
 {-| Check if the given key exists in the dictionary.
 -}
-member : Sorter k -> k -> Dict k v -> Bool
-member sorter key dict =
-    memberHelper (Sort.order sorter key) dict
+member : Sorter k -> k -> Filter (Dict k v)
+member sorter key =
+    Filter.custom <| memberHelper (Sort.order sorter key)
 
 
-memberHelper : (k -> Order) -> Dict k v -> Bool
+memberHelper : (k -> Order) -> Dict k v -> Filter.Status
 memberHelper sorter dict =
     case dict of
         Leaf ->
-            False
+            Filter.Fail
 
         Node _ key _ gt right ->
             case sorter key of
                 EQ ->
-                    True
+                    Filter.Pass
 
                 LT ->
                     memberHelper sorter gt
@@ -119,14 +119,16 @@ memberHelper sorter dict =
 
 {-| Check if the dictionary is empty.
 -}
-isEmpty : Dict k v -> Bool
-isEmpty dict =
-    case dict of
-        Leaf ->
-            True
+isEmpty : Filter (Dict k v)
+isEmpty =
+    Filter.custom <|
+        \dict ->
+            case dict of
+                Leaf ->
+                    Filter.Pass
 
-        _ ->
-            False
+                _ ->
+                    Filter.Fail
 
 
 {-| Insert a value at the given key.
