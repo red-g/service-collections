@@ -1,8 +1,8 @@
-module Service.Set exposing (Set, max, foldl, foldr, fromList, isEmpty, previous, member, middle, next, remove, min, toList, map, insert, filter, singleton, size)
+module Service.Set exposing (Set, max, foldl, foldr, fold, fromList, isEmpty, previous, member, middle, next, remove, min, toList, map, insert, filter, singleton, size)
 
 {-| `Service.Set`s provide the exact same functionality as Elm's built-in `Set` type, while allowing for easy and safe extension with custom element types.
 
-@docs Set, max, foldl, foldr, fromList, isEmpty, previous, member, middle, next, remove, min, toList, map, insert, filter, singleton, size
+@docs Set, max, foldl, foldr, fold, fromList, isEmpty, previous, member, middle, next, remove, min, toList, map, insert, filter, singleton, size
 
     module MyRecordSet exposing (MyRecordSet, fromList, member {- , ... all the other implementations -})
 
@@ -37,6 +37,7 @@ module Service.Set exposing (Set, max, foldl, foldr, fromList, isEmpty, previous
 -}
 
 import Filter exposing (Filter)
+import Fold exposing (Fold)
 import Sort exposing (Sorter)
 
 
@@ -121,6 +122,18 @@ insert sorter key dict =
 
         x ->
             x
+
+
+{-| Insert an element in the set.
+-}
+fold : Sorter k -> Fold k (Set k)
+fold sorter =
+    Fold.custom <| fold_ sorter
+
+
+fold_ : Sorter k -> Set k -> k -> Set k
+fold_ sorter set value =
+    insert sorter value set
 
 
 insertHelp : Sorter k -> k -> Set k -> Set k
@@ -350,8 +363,8 @@ moveRedRight set =
 {-| Convert a list into a set.
 -}
 fromList : Sorter k -> List k -> Set k
-fromList sorter assocs =
-    List.foldl (\key set -> insert sorter key set) empty assocs
+fromList sorter =
+    Fold.merge (Fold.listLeft <| fold sorter) empty
 
 
 {-| Get the next highest element in the set.
@@ -444,28 +457,38 @@ maxk key set =
             key
 
 
-{-| Reduce the elements in the set from highest to lowest.
--}
-foldr : (k -> b -> b) -> b -> Set k -> b
-foldr func acc t =
+foldr_ : (b -> k -> b) -> b -> Set k -> b
+foldr_ func acc t =
     case t of
         Leaf ->
             acc
 
         Node _ key left right ->
-            foldr func (func key (foldr func acc right)) left
+            foldr_ func (func (foldr_ func acc right) key) left
 
 
-{-| Reduce the elements in the set from lowest to highest.
+{-| Reduce the elements in the set from highest to lowest.
 -}
-foldl : (k -> b -> b) -> b -> Set k -> b
-foldl func acc dict =
+foldr : Fold k b -> Fold (Set k) b
+foldr folder =
+    Fold.custom <| foldr_ <| Fold.merge folder
+
+
+foldl_ : (b -> k -> b) -> b -> Set k -> b
+foldl_ func acc dict =
     case dict of
         Leaf ->
             acc
 
         Node _ key left right ->
-            foldl func (func key (foldl func acc left)) right
+            foldl_ func (func (foldl_ func acc left) key) right
+
+
+{-| Reduce the elements in the set from lowest to highest.
+-}
+foldl : Fold k b -> Fold (Set k) b
+foldl folder =
+    Fold.custom <| foldl_ <| Fold.merge folder
 
 
 {-| Apply a function to each element in the set.
@@ -483,25 +506,15 @@ map func set =
 {-| Keep items that pass the filter.
 -}
 filter : Sorter k -> Filter k -> Set k -> Set k
-filter sorter predicate set =
-    foldl (filterHelper sorter predicate) empty set
-
-
-filterHelper : Sorter k -> Filter k -> k -> Set k -> Set k
-filterHelper sorter predicate key set =
-    case Filter.test predicate key of
-        Filter.Pass ->
-            insert sorter key set
-
-        Filter.Fail ->
-            set
+filter sorter predicate =
+    Fold.merge (foldl <| Fold.passed predicate <| fold sorter) empty
 
 
 {-| Convert a set to a list.
 -}
 toList : Set k -> List k
-toList set =
-    foldr (::) [] set
+toList =
+    Fold.merge (foldr Fold.list) []
 
 
 {-| Construct a set with one element.
@@ -515,7 +528,17 @@ singleton key =
 -}
 size : Set k -> Int
 size set =
-    foldr (\_ n -> n + 1) 0 set
+    sizeHelper 0 set
+
+
+sizeHelper : Int -> Set k -> Int
+sizeHelper acc set =
+    case set of
+        Leaf ->
+            acc
+
+        Node _ _ left right ->
+            sizeHelper (sizeHelper acc right) left
 
 
 {-| Get the smallest element in the set.

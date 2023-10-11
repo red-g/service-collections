@@ -1,8 +1,8 @@
-module Service.Dict exposing (Dict, max, foldl, foldr, fromList, get, isEmpty, previous, member, middle, next, remove, min, filter, size, insert, keys, values, map, update, singleton, toList)
+module Service.Dict exposing (Dict, max, foldl, foldr, fold, fromList, get, isEmpty, previous, member, middle, next, remove, min, filter, size, insert, keys, values, map, update, singleton, toList)
 
 {-| `Service.Dict`s provide the exact same functionality as Elm's built-in `Dict` type, while allowing for easy and safe extension with custom key types.
 
-@docs Dict, max, foldl, foldr, fromList, get, isEmpty, previous, member, middle, next, remove, min, filter, size, insert, keys, values, map, update, singleton, toList
+@docs Dict, max, foldl, foldr, fold, fromList, get, isEmpty, previous, member, middle, next, remove, min, filter, size, insert, keys, values, map, update, singleton, toList
 
     module MyRecordDict exposing (MyRecordDict, fromList, get {- , ... all the other implementations -})
 
@@ -33,6 +33,7 @@ module Service.Dict exposing (Dict, max, foldl, foldr, fromList, get, isEmpty, p
 -}
 
 import Filter exposing (Filter)
+import Fold exposing (Fold)
 import Sort exposing (Sorter)
 
 
@@ -379,8 +380,20 @@ moveRedRight dict =
 {-| Convert an association list into a dictionary.
 -}
 fromList : Sorter k -> List ( k, v ) -> Dict k v
-fromList sorter assocs =
-    List.foldl (\( key, value ) dict -> insert sorter key value dict) empty assocs
+fromList sorter =
+    Fold.merge (Fold.listLeft <| fold sorter) empty
+
+
+{-| Insert a key-value pair into the dictionary.
+-}
+fold : Sorter k -> Fold ( k, v ) (Dict k v)
+fold sorter =
+    Fold.custom <| fold_ sorter
+
+
+fold_ : Sorter k -> Dict k v -> ( k, v ) -> Dict k v
+fold_ sorter dict ( key, value ) =
+    insert sorter key value dict
 
 
 {-| Get the next highest key-value pair in the dictionary
@@ -473,28 +486,38 @@ maxk pair dict =
             pair
 
 
-{-| Reduce the key-value pairs in the dictionary from highest to lowest.
--}
-foldr : (k -> v -> b -> b) -> b -> Dict k v -> b
-foldr func acc t =
+foldr_ : (b -> ( k, v ) -> b) -> b -> Dict k v -> b
+foldr_ func acc t =
     case t of
         Leaf ->
             acc
 
         Node _ key value left right ->
-            foldr func (func key value (foldr func acc right)) left
+            foldr_ func (func (foldr_ func acc right) ( key, value )) left
 
 
-{-| Reduce the key-value pairs in the dictionary from lowest to highest.
+{-| Reduce the key-value pairs in the dictionary from highest to lowest.
 -}
-foldl : (k -> v -> b -> b) -> b -> Dict k v -> b
-foldl func acc dict =
+foldr : Fold ( k, v ) b -> Fold (Dict k v) b
+foldr folder =
+    Fold.custom <| foldr_ <| Fold.merge folder
+
+
+foldl_ : (b -> ( k, v ) -> b) -> b -> Dict k v -> b
+foldl_ func acc dict =
     case dict of
         Leaf ->
             acc
 
         Node _ key value left right ->
-            foldl func (func key value (foldl func acc left)) right
+            foldl_ func (func (foldl_ func acc left) ( key, value )) right
+
+
+{-| Reduce the key-value pairs in the dictionary from lowest to highest.
+-}
+foldl : Fold ( k, v ) b -> Fold (Dict k v) b
+foldl folder =
+    Fold.custom <| foldl_ <| Fold.merge folder
 
 
 {-| Get the smallest key-value pair in the dictionary.
@@ -522,7 +545,17 @@ singleton key value =
 -}
 size : Dict k v -> Int
 size dict =
-    foldr (\_ _ n -> n + 1) 0 dict
+    sizeHelper 0 dict
+
+
+sizeHelper : Int -> Dict k v -> Int
+sizeHelper acc dict =
+    case dict of
+        Leaf ->
+            acc
+
+        Node _ _ _ left right ->
+            sizeHelper (sizeHelper acc right) left
 
 
 {-| Apply a function to each value in the dictionary.
@@ -540,22 +573,22 @@ map func dict =
 {-| Get a list of the keys in the dictionary.
 -}
 keys : Dict k v -> List k
-keys dict =
-    foldr (\k _ l -> k :: l) [] dict
+keys =
+    Fold.merge (foldr <| Fold.wrap Tuple.first Fold.list) []
 
 
 {-| Get a list of the values in the dictionary.
 -}
 values : Dict k v -> List v
-values dict =
-    foldr (\_ v l -> v :: l) [] dict
+values =
+    Fold.merge (foldr <| Fold.wrap Tuple.second Fold.list) []
 
 
 {-| Convert a dictionary to an association list.
 -}
 toList : Dict k v -> List ( k, v )
 toList dict =
-    foldr (\k v l -> ( k, v ) :: l) [] dict
+    Fold.merge (foldr Fold.list) [] dict
 
 
 {-| Update the value of the given key.
@@ -573,15 +606,5 @@ update sorter key alter dict =
 {-| Keep key-value pairs that pass the filter.
 -}
 filter : Sorter k -> Filter ( k, v ) -> Dict k v -> Dict k v
-filter sorter predicate dict =
-    foldl (filterHelper sorter predicate) empty dict
-
-
-filterHelper : Sorter k -> Filter ( k, v ) -> k -> v -> Dict k v -> Dict k v
-filterHelper sorter predicate key value dict =
-    case Filter.test predicate ( key, value ) of
-        Filter.Pass ->
-            insert sorter key value dict
-
-        Filter.Fail ->
-            dict
+filter sorter predicate =
+    Fold.merge (foldl <| Fold.passed predicate <| fold sorter) empty
