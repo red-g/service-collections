@@ -1,8 +1,8 @@
-module Service.Set exposing (Set, max, foldl, foldr, fold, fromList, isEmpty, previous, get, member, root, next, remove, min, toList, map, insert, filter, singleton, size)
+module Service.Set exposing (Set, max, foldl, foldr, fold, fromList, isEmpty, previous, get, member, root, next, remove, min, toList, map, insert, filter, singleton, size, empty)
 
 {-| `Service.Set`s provide the exact same functionality as Elm's built-in `Set` type, while allowing for easy and safe extension with custom element types.
 
-@docs Set, max, foldl, foldr, fold, fromList, isEmpty, previous, get, member, root, next, remove, min, toList, map, insert, filter, singleton, size
+@docs Set, max, foldl, foldr, fold, fromList, isEmpty, previous, get, member, root, next, remove, min, toList, map, insert, filter, singleton, size, empty
 
     module MyRecordSet exposing (MyRecordSet, fromList, member {- , ... all the other implementations -})
 

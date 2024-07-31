@@ -1,8 +1,8 @@
-module Service.Dict exposing (Dict, max, foldl, foldr, fold, fromList, get, isEmpty, previous, member, root, next, remove, min, filter, size, insert, keys, values, map, update, singleton, toList)
+module Service.Dict exposing (Dict, max, foldl, foldr, fold, fromList, get, isEmpty, previous, member, root, next, remove, min, filter, size, insert, keys, values, map, update, singleton, toList, empty)
 
 {-| `Service.Dict`s provide the exact same functionality as Elm's built-in `Dict` type, while allowing for easy and safe extension with custom key types.
 
-@docs Dict, max, foldl, foldr, fold, fromList, get, isEmpty, previous, member, root, next, remove, min, filter, size, insert, keys, values, map, update, singleton, toList
+@docs Dict, max, foldl, foldr, fold, fromList, get, isEmpty, previous, member, root, next, remove, min, filter, size, insert, keys, values, map, update, singleton, toList, empty
 
     module MyRecordDict exposing (MyRecordDict, fromList, get {- , ... all the other implementations -})
 
