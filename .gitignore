@@ -1,1 +1,6 @@
+codegen/elm-stuff/
+codegen/Gen/
 elm-stuff/
+.DS_Store
+node_modules/
+package-lock.json

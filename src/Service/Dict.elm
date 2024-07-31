@@ -1,8 +1,8 @@
-module Service.Dict exposing (Dict, max, foldl, foldr, fold, fromList, get, isEmpty, previous, member, middle, next, remove, min, filter, size, insert, keys, values, map, update, singleton, toList)
+module Service.Dict exposing (Dict, max, foldl, foldr, fold, fromList, get, isEmpty, previous, member, root, next, remove, min, filter, size, insert, keys, values, map, update, singleton, toList)
 
 {-| `Service.Dict`s provide the exact same functionality as Elm's built-in `Dict` type, while allowing for easy and safe extension with custom key types.
 
-@docs Dict, max, foldl, foldr, fold, fromList, get, isEmpty, previous, member, middle, next, remove, min, filter, size, insert, keys, values, map, update, singleton, toList
+@docs Dict, max, foldl, foldr, fold, fromList, get, isEmpty, previous, member, root, next, remove, min, filter, size, insert, keys, values, map, update, singleton, toList
 
     module MyRecordDict exposing (MyRecordDict, fromList, get {- , ... all the other implementations -})
 
@@ -49,10 +49,10 @@ type Dict k v
     | Leaf
 
 
-{-| Get the middle key-value pair of the dictionary.
+{-| Get the root value of the set. Approximately the median.
 -}
-middle : Dict k v -> Maybe ( k, v )
-middle dict =
+root : Dict k v -> Maybe ( k, v )
+root dict =
     case dict of
         Node _ key value _ _ ->
             Just ( key, value )

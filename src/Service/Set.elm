@@ -1,8 +1,11 @@
-module Service.Set exposing (Set, max, foldl, foldr, fold, fromList, isEmpty, previous, member, middle, next, remove, min, toList, map, insert, filter, singleton, size)
+module Service.Set exposing
+    ( Set, max, foldl, foldr, fold, fromList, isEmpty, previous, member, root, next, remove, min, toList, map, insert, filter, singleton, size
+    , get
+    )
 
 {-| `Service.Set`s provide the exact same functionality as Elm's built-in `Set` type, while allowing for easy and safe extension with custom element types.
 
-@docs Set, max, foldl, foldr, fold, fromList, isEmpty, previous, member, middle, next, remove, min, toList, map, insert, filter, singleton, size
+@docs Set, max, foldl, foldr, fold, fromList, isEmpty, previous, member, root, next, remove, min, toList, map, insert, filter, singleton, size
 
     module MyRecordSet exposing (MyRecordSet, fromList, member {- , ... all the other implementations -})
 
@@ -53,10 +56,10 @@ type Set k
     | Leaf
 
 
-{-| Get the middle value of the set.
+{-| Get the root value of the set. Approximately the median.
 -}
-middle : Set k -> Maybe k
-middle set =
+root : Set k -> Maybe k
+root set =
     case set of
         Node _ key _ _ ->
             Just key
@@ -73,6 +76,22 @@ empty =
 
 
 {-| Check if a value is in the set.
+idea: Sort.by Id.value Sort.int : Sorter Id
+situation: have Int, not Id, but want to find Id
+try: get (id -> compare (Id.value id) someNumber), could be generalized (Sorter a b := a -> b -> Order)
+so, get : Sorter a k -> a -> Set k -> Maybe k
+
+  - advantage of first approach is that you can use the same comparator the whole time
+    or, get : (k -> Order) -> Set k -> Maybe k
+
+set is only necessary collection, could just get rid of dict once we increase generality of member
+more precisely than that, we want to say Sorter k = (b -> a) \* Sorter a = by derived Sort.derived
+
+then we could do:
+get : (b -> a) -> Sorter a -> Set b -> Maybe b
+
+issue: what if we want to map the other key too? have to use sorter, since not necessarily maintaining eq (even though we know it is)
+
 -}
 member : Sorter k -> k -> Filter (Set k)
 member sorter key =
@@ -95,6 +114,34 @@ memberHelper sorter set =
 
                 GT ->
                     memberHelper sorter gt
+
+
+{-| Get the value of a set member by its derived key.
+
+    compareIdToInt : Int -> Id -> Order
+    compareIdToInt val =
+        Id.code >> Sort.order Sort.int val
+
+    get (compareIdToInt 5) <| Sort.fromList [ Id 1, Id 2, Id 5]
+    -- Id 5
+
+-}
+get : (k -> Order) -> Set k -> Maybe k
+get sorter set =
+    case set of
+        Leaf ->
+            Nothing
+
+        Node _ key left right ->
+            case sorter key of
+                EQ ->
+                    Just key
+
+                LT ->
+                    get sorter left
+
+                GT ->
+                    get sorter right
 
 
 {-| Check if the set is empty.
