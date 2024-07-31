@@ -3,7 +3,7 @@
     "name": "red-g/service-collections",
     "summary": "Collections for implementing custom types",
     "license": "MIT",
-    "version": "3.0.1",
+    "version": "4.0.0",
     "exposed-modules": [
         "Service.Set",
         "Service.Dict"
